@@ -93,25 +93,6 @@ export default function App() {
     }
   }, [activeProfileId]);
   
-  if (!activeProfileId) {
-    return (
-      <ProfileSelector 
-        profiles={profiles}
-        onSelect={setActiveProfileId}
-        onCreate={(name, color) => {
-          const newProfile = { id: crypto.randomUUID(), name, color };
-          setProfiles([...profiles, newProfile]);
-          setActiveProfileId(newProfile.id);
-        }}
-        onDelete={(id) => {
-          setProfiles(profiles.filter(p => p.id !== id));
-          localStorage.removeItem(`macaron_tasks_${id}`);
-          localStorage.removeItem(`macaron_categories_${id}`);
-        }}
-      />
-    );
-  }
-
   const tasksForSelectedDate = useMemo(() => {
     return tasks.filter(task => isSameDay(parseISO(task.date), selectedDate));
   }, [tasks, selectedDate]);
@@ -219,6 +200,25 @@ export default function App() {
       };
     }).filter(d => d.estimated > 0); // Only show categories with tasks
   }, [tasks, categories]);
+
+  if (!activeProfileId) {
+    return (
+      <ProfileSelector 
+        profiles={profiles}
+        onSelect={setActiveProfileId}
+        onCreate={(name, color) => {
+          const newProfile = { id: crypto.randomUUID(), name, color };
+          setProfiles([...profiles, newProfile]);
+          setActiveProfileId(newProfile.id);
+        }}
+        onDelete={(id) => {
+          setProfiles(profiles.filter(p => p.id !== id));
+          localStorage.removeItem(`macaron_tasks_${id}`);
+          localStorage.removeItem(`macaron_categories_${id}`);
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen pb-24 md:pb-8">
