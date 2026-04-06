@@ -206,10 +206,13 @@ export default function App() {
       <ProfileSelector 
         profiles={profiles}
         onSelect={setActiveProfileId}
-        onCreate={(name, color) => {
-          const newProfile = { id: generateId(), name, color };
+        onCreate={(name, color, avatar) => {
+          const newProfile = { id: generateId(), name, color, avatar };
           setProfiles([...profiles, newProfile]);
           setActiveProfileId(newProfile.id);
+        }}
+        onEdit={(id, name, color, avatar) => {
+          setProfiles(profiles.map(p => p.id === id ? { ...p, name, color, avatar } : p));
         }}
         onDelete={(id) => {
           setProfiles(profiles.filter(p => p.id !== id));
@@ -238,9 +241,25 @@ export default function App() {
           <h1 className="text-2xl sm:text-3xl md:text-4xl font-medium text-macaron-pink-dark tracking-[0.2em] drop-shadow-sm uppercase">
             MISSION CORE
           </h1>
-          <p className="text-macaron-pink-dark/80 font-medium mt-2 text-sm md:text-base">
-            歡迎回來，{profiles.find(p => p.id === activeProfileId)?.name}！生活的每一刻都值得好好記錄
-          </p>
+          <div className="flex flex-wrap justify-center items-center gap-3 mt-4">
+            {profiles.find(p => p.id === activeProfileId)?.avatar ? (
+              <img 
+                src={profiles.find(p => p.id === activeProfileId)?.avatar} 
+                alt="Avatar"
+                className="w-10 h-10 rounded-full border-2 border-macaron-pink object-cover shadow-sm shrink-0"
+              />
+            ) : (
+               <div 
+                 className="w-10 h-10 shrink-0 rounded-full shadow-inner flex items-center justify-center text-white"
+                 style={{ backgroundColor: profiles.find(p => p.id === activeProfileId)?.color || '#FFD1DC' }}
+               >
+                 <User size={20} className="drop-shadow-sm" />
+               </div>
+            )}
+            <p className="text-macaron-pink-dark/80 font-medium text-sm md:text-base">
+              歡迎回來，{profiles.find(p => p.id === activeProfileId)?.name}！生活的每一刻都值得好好記錄
+            </p>
+          </div>
         </header>
 
         {/* Desktop Navigation */}
@@ -910,16 +929,47 @@ function ProfileSelector({
   profiles, 
   onSelect, 
   onCreate, 
+  onEdit,
   onDelete 
 }: { 
   profiles: Profile[]; 
   onSelect: (id: string) => void;
-  onCreate: (name: string, color: string) => void;
+  onCreate: (name: string, color: string, avatar?: string) => void;
+  onEdit: (id: string, name: string, color: string, avatar?: string) => void;
   onDelete: (id: string) => void;
 }) {
   const [isCreating, setIsCreating] = useState(false);
+  const [editingProfileId, setEditingProfileId] = useState<string | null>(null);
   const [newName, setNewName] = useState('');
   const [newColor, setNewColor] = useState('#FFD1DC');
+  const [newAvatar, setNewAvatar] = useState<string | undefined>(undefined);
+
+  const openCreateModal = () => {
+    setEditingProfileId(null);
+    setNewName('');
+    setNewColor('#FFD1DC');
+    setNewAvatar(undefined);
+    setIsCreating(true);
+  };
+
+  const openEditModal = (profile: Profile) => {
+    setEditingProfileId(profile.id);
+    setNewName(profile.name);
+    setNewColor(profile.color);
+    setNewAvatar(profile.avatar);
+    setIsCreating(true);
+  };
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setNewAvatar(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   return (
     <div className="min-h-screen pb-24 md:pb-8 flex items-center justify-center p-4">
@@ -948,19 +998,31 @@ function ProfileSelector({
                   e.stopPropagation();
                   onDelete(profile.id);
                 }}
-                className="absolute -top-3 -right-3 p-2 bg-red-100 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-red-500 hover:text-white"
+                className="absolute -top-3 -right-3 p-2 bg-red-100 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-red-500 hover:text-white shadow-sm"
               >
                 <X size={16} />
+              </button>
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  openEditModal(profile);
+                }}
+                className="absolute -top-3 -left-3 p-2 bg-slate-100 text-slate-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-slate-300 hover:text-slate-800 shadow-sm"
+              >
+                <Pencil size={16} />
               </button>
               <button
                 onClick={() => onSelect(profile.id)}
                 className="w-full flex flex-col items-center gap-4 bg-slate-50 p-6 rounded-3xl border-4 border-transparent hover:border-macaron-pink hover:shadow-xl transition-all"
               >
                 <div 
-                  className="w-20 h-20 rounded-full shadow-inner flex items-center justify-center text-white"
-                  style={{ backgroundColor: profile.color }}
+                  className="w-20 h-20 rounded-full shadow-inner flex items-center justify-center text-white overflow-hidden bg-cover bg-center shrink-0"
+                  style={{ 
+                    backgroundColor: profile.color,
+                    backgroundImage: profile.avatar ? `url(${profile.avatar})` : 'none'
+                  }}
                 >
-                  <User size={40} className="drop-shadow-sm" />
+                  {!profile.avatar && <User size={40} className="drop-shadow-sm" />}
                 </div>
                 <span className="font-medium text-slate-700 text-lg truncate w-full">{profile.name}</span>
               </button>
@@ -970,10 +1032,10 @@ function ProfileSelector({
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
-            onClick={() => setIsCreating(true)}
+            onClick={openCreateModal}
             className="flex flex-col items-center gap-4 bg-macaron-pink-light/30 p-6 rounded-3xl border-4 border-dashed border-macaron-pink text-macaron-pink-dark hover:bg-macaron-pink-light transition-all h-full justify-center"
           >
-            <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-sm">
+            <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-sm shrink-0">
               <UserPlus size={40} />
             </div>
             <span className="font-medium text-lg">新增玩家</span>
@@ -988,16 +1050,47 @@ function ProfileSelector({
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9 }}
-              className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl border-8 border-macaron-pink p-8"
+              className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl border-8 border-macaron-pink p-8 max-h-[90vh] overflow-y-auto"
             >
               <div className="flex justify-between items-center mb-8">
-                <h3 className="text-2xl font-medium text-slate-700">建立新檔案</h3>
+                <h3 className="text-2xl font-medium text-slate-700">{editingProfileId ? '編輯玩家資料' : '建立新檔案'}</h3>
                 <button onClick={() => setIsCreating(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
                   <X size={24} className="text-slate-400" />
                 </button>
               </div>
               
               <div className="space-y-6">
+                <div className="flex flex-col items-center gap-4">
+                  <label className="relative cursor-pointer group">
+                    <div 
+                      className="w-24 h-24 rounded-full shadow-inner flex items-center justify-center text-white overflow-hidden hover:opacity-90 transition-opacity bg-cover bg-center shrink-0 border-4 border-macaron-pink-light"
+                      style={{ 
+                        backgroundColor: newColor,
+                        backgroundImage: newAvatar ? `url(${newAvatar})` : 'none'
+                      }}
+                    >
+                      {!newAvatar && <User size={48} className="drop-shadow-sm" />}
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white text-sm font-medium text-center">
+                        上傳<br/>大頭貼
+                      </div>
+                    </div>
+                    <input 
+                      type="file" 
+                      accept="image/*" 
+                      onChange={handleImageUpload}
+                      className="hidden" 
+                    />
+                  </label>
+                  {newAvatar && (
+                    <button 
+                      onClick={() => setNewAvatar(undefined)}
+                      className="text-sm text-red-400 hover:text-red-500 font-medium transition-colors"
+                    >
+                      移除大頭貼
+                    </button>
+                  )}
+                </div>
+
                 <div>
                    <label className="text-sm font-medium text-slate-500 mb-2 block">玩家名稱</label>
                    <input 
@@ -1011,7 +1104,7 @@ function ProfileSelector({
                 </div>
                 <div>
                    <label className="text-sm font-medium text-slate-500 mb-2 block">代表色</label>
-                   <div className="flex gap-4">
+                   <div className="flex flex-wrap gap-4">
                      {['#FFD1DC', '#B3E5FC', '#FFF9C4', '#C8E6C9', '#E1BEE7', '#FFCCBC'].map(color => (
                         <button
                           key={color}
@@ -1026,13 +1119,16 @@ function ProfileSelector({
                 <button 
                   disabled={!newName.trim()}
                   onClick={() => {
-                    onCreate(newName.trim(), newColor);
+                    if (editingProfileId) {
+                      onEdit(editingProfileId, newName.trim(), newColor, newAvatar);
+                    } else {
+                      onCreate(newName.trim(), newColor, newAvatar);
+                    }
                     setIsCreating(false);
-                    setNewName('');
                   }}
                   className="w-full py-4 bg-macaron-pink-dark text-white rounded-2xl font-medium text-lg shadow-lg hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
                 >
-                  開始遊戲！
+                  {editingProfileId ? '儲存變更' : '開始遊戲！'}
                 </button>
               </div>
             </motion.div>

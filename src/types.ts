@@ -19,6 +19,7 @@ export interface Profile {
   id: string;
   name: string;
   color: string;
+  avatar?: string;
 }
 
 export const DEFAULT_CATEGORIES: Category[] = [
