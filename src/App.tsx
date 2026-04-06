@@ -998,7 +998,7 @@ function ProfileSelector({
                   e.stopPropagation();
                   onDelete(profile.id);
                 }}
-                className="absolute -top-3 -right-3 p-2 bg-red-100 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-red-500 hover:text-white shadow-sm"
+                className="absolute -top-3 -right-3 p-2 bg-red-100 text-red-500 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10 hover:bg-red-500 hover:text-white shadow-sm"
               >
                 <X size={16} />
               </button>
@@ -1007,7 +1007,7 @@ function ProfileSelector({
                   e.stopPropagation();
                   openEditModal(profile);
                 }}
-                className="absolute -top-3 -left-3 p-2 bg-slate-100 text-slate-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-slate-300 hover:text-slate-800 shadow-sm"
+                className="absolute -top-3 -left-3 p-2 bg-slate-100 text-slate-500 rounded-full opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity z-10 hover:bg-slate-300 hover:text-slate-800 shadow-sm"
               >
                 <Pencil size={16} />
               </button>
