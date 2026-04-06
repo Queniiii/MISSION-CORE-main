@@ -1116,20 +1116,36 @@ function ProfileSelector({
                    </div>
                 </div>
                 
-                <button 
-                  disabled={!newName.trim()}
-                  onClick={() => {
-                    if (editingProfileId) {
-                      onEdit(editingProfileId, newName.trim(), newColor, newAvatar);
-                    } else {
-                      onCreate(newName.trim(), newColor, newAvatar);
-                    }
-                    setIsCreating(false);
-                  }}
-                  className="w-full py-4 bg-macaron-pink-dark text-white rounded-2xl font-medium text-lg shadow-lg hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
-                >
-                  {editingProfileId ? '儲存變更' : '開始遊戲！'}
-                </button>
+                <div className="flex flex-col gap-3 mt-4">
+                  <button 
+                    disabled={!newName.trim()}
+                    onClick={() => {
+                      if (editingProfileId) {
+                        onEdit(editingProfileId, newName.trim(), newColor, newAvatar);
+                      } else {
+                        onCreate(newName.trim(), newColor, newAvatar);
+                      }
+                      setIsCreating(false);
+                    }}
+                    className="w-full py-4 bg-macaron-pink-dark text-white rounded-2xl font-medium text-lg shadow-lg hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                  >
+                    {editingProfileId ? '儲存變更' : '開始遊戲！'}
+                  </button>
+
+                  {editingProfileId && (
+                    <button 
+                      onClick={() => {
+                        if (window.confirm('確定要刪除這個玩家嗎？相關的任務資料將一併被刪除。')) {
+                          onDelete(editingProfileId);
+                          setIsCreating(false);
+                        }
+                      }}
+                      className="w-full py-4 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-2xl font-medium text-lg shadow-sm transition-all"
+                    >
+                      刪除玩家
+                    </button>
+                  )}
+                </div>
               </div>
             </motion.div>
           </div>
