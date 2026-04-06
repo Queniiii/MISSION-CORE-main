@@ -1,0 +1,823 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MISSION CORE</title>
+  
+  <!-- 引入 Google 字體 -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Zen+Maru+Gothic:wght@400;500;700&display=swap" rel="stylesheet">
+  
+  <!-- 引入 Tailwind CSS (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Zen Maru Gothic"', '"Noto Sans TC"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+          },
+          colors: {
+            'macaron-pink': '#FFD1DC',
+            'macaron-pink-dark': '#FFB7C5',
+            'macaron-pink-light': '#FFF0F3',
+            'macaron-yellow': '#FFF9C4',
+            'macaron-blue': '#B3E5FC',
+            'macaron-green': '#C8E6C9',
+            'macaron-purple': '#E1BEE7',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- 自訂 CSS 樣式 -->
+  <style>
+    body {
+      font-family: "Zen Maru Gothic", "Noto Sans TC", sans-serif;
+      font-weight: 500;
+      color: #334155;
+      background-color: #FFF0F3;
+      background-image: radial-gradient(#FFFDF5 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+      background-attachment: fixed;
+      min-height: 100vh;
+      margin: 0;
+    }
+    
+    ::-webkit-scrollbar {
+      width: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #FFD1DC;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #FFB7C5;
+    }
+  </style>
+
+  <!-- 引入 React 與 ReactDOM -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  
+  <!-- 引入 Babel (讓瀏覽器可以直接編譯 JSX) -->
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- 引入其他依賴套件 -->
+  <script src="https://unpkg.com/date-fns@2.29.3/dist/date-fns.min.js"></script>
+  <script src="https://unpkg.com/recharts@2.10.3/umd/Recharts.js"></script>
+  <script src="https://unpkg.com/framer-motion@10.16.4/dist/framer-motion.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+
+  <!-- React 應用程式邏輯 -->
+  <script type="text/babel">
+    const { useState, useEffect, useMemo } = React;
+    const { format, addMonths, subMonths, startOfMonth, endOfMonth, startOfWeek, endOfWeek, isSameMonth, isSameDay, parseISO } = window.dateFns;
+    const { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } = window.Recharts;
+    const { motion, AnimatePresence } = window.Motion;
+
+    // --- 內建 SVG Icons ---
+    const Icon = ({ children, size = 24, className = "" }) => (
+      <svg xmlns="http://www.w3.org/2000/svg" width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}>
+        {children}
+      </svg>
+    );
+    const CalendarIcon = (p) => <Icon {...p}><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/></Icon>;
+    const ListTodo = (p) => <Icon {...p}><rect x="3" y="5" width="6" height="6" rx="1"/><path d="m3 17 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></Icon>;
+    const BarChart3 = (p) => <Icon {...p}><path d="M3 3v18h18"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></Icon>;
+    const ChevronLeft = (p) => <Icon {...p}><path d="m15 18-6-6 6-6"/></Icon>;
+    const ChevronRight = (p) => <Icon {...p}><path d="m9 18 6-6-6-6"/></Icon>;
+    const Plus = (p) => <Icon {...p}><path d="M5 12h14"/><path d="M12 5v14"/></Icon>;
+    const CheckCircle2 = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></Icon>;
+    const Circle = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/></Icon>;
+    const Clock = (p) => <Icon {...p}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></Icon>;
+    const Trash2 = (p) => <Icon {...p}><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></Icon>;
+    const X = (p) => <Icon {...p}><path d="M18 6 6 18"/><path d="m6 6 12 12"/></Icon>;
+    const Palette = (p) => <Icon {...p}><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></Icon>;
+
+    // --- 工具函式 ---
+    const cn = (...classes) => classes.filter(Boolean).join(' ');
+    
+    const formatMinutes = (mins) => {
+      if (!mins) return '0分鐘';
+      const h = Math.floor(mins / 60);
+      const m = mins % 60;
+      if (h > 0 && m > 0) return `${h}小時 ${m}分鐘`;
+      if (h > 0) return `${h}小時`;
+      return `${m}分鐘`;
+    };
+
+    const generateId = () => {
+      if (typeof window !== 'undefined' && window.crypto && window.crypto.randomUUID) {
+        return window.crypto.randomUUID();
+      }
+      return Math.random().toString(36).substring(2, 15);
+    };
+
+    const DEFAULT_CATEGORIES = [
+      { id: '1', name: '工作', color: '#FFD1DC' },
+      { id: '2', name: '學習', color: '#B3E5FC' },
+      { id: '3', name: '生活', color: '#FFF9C4' },
+      { id: '4', name: '運動', color: '#C8E6C9' },
+    ];
+
+    // --- 主程式 App ---
+    function App() {
+      const [view, setView] = useState('tasks');
+      const [currentDate, setCurrentDate] = useState(new Date());
+      const [selectedDate, setSelectedDate] = useState(new Date());
+      const [tasks, setTasks] = useState([]);
+      const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+      const [isAddingTask, setIsAddingTask] = useState(false);
+      const [completingTask, setCompletingTask] = useState(null);
+
+      const today = new Date();
+
+      useEffect(() => {
+        const savedTasks = localStorage.getItem('macaron_tasks');
+        const savedCategories = localStorage.getItem('macaron_categories');
+        if (savedTasks) setTasks(JSON.parse(savedTasks));
+        if (savedCategories) setCategories(JSON.parse(savedCategories));
+      }, []);
+
+      useEffect(() => {
+        localStorage.setItem('macaron_tasks', JSON.stringify(tasks));
+        localStorage.setItem('macaron_categories', JSON.stringify(categories));
+      }, [tasks, categories]);
+
+      const tasksForSelectedDate = useMemo(() => {
+        return tasks.filter(task => isSameDay(parseISO(task.date), selectedDate));
+      }, [tasks, selectedDate]);
+
+      const tasksForToday = useMemo(() => {
+        return tasks.filter(task => isSameDay(parseISO(task.date), today));
+      }, [tasks]);
+
+      const addTask = (title, categoryId, hours, minutes) => {
+        const targetDate = view === 'tasks' ? today : selectedDate;
+        const newTask = {
+          id: generateId(),
+          title,
+          categoryId,
+          date: format(targetDate, 'yyyy-MM-dd'),
+          estimatedMinutes: hours * 60 + minutes,
+          completed: false,
+          createdAt: Date.now(),
+        };
+        setTasks([...tasks, newTask]);
+        setIsAddingTask(false);
+      };
+
+      const addCategory = (name, color) => {
+        const newCategory = {
+          id: generateId(),
+          name,
+          color,
+        };
+        setCategories([...categories, newCategory]);
+      };
+
+      const deleteTask = (id) => {
+        setTasks(tasks.filter(t => t.id !== id));
+      };
+
+      const finishTask = (id, actualHours, actualMinutes) => {
+        setTasks(tasks.map(t => 
+          t.id === id 
+            ? { ...t, completed: true, actualMinutes: actualHours * 60 + actualMinutes } 
+            : t
+        ));
+        setCompletingTask(null);
+      };
+
+      const categoryEfficiencyData = useMemo(() => {
+        return categories.map(cat => {
+          const catTasks = tasks.filter(t => t.categoryId === cat.id && t.completed);
+          const estimated = catTasks.reduce((acc, t) => acc + t.estimatedMinutes, 0);
+          const actual = catTasks.reduce((acc, t) => acc + (t.actualMinutes || 0), 0);
+          
+          let efficiency = 0;
+          if (actual > 0) {
+            efficiency = Math.round((estimated / actual) * 100);
+          }
+
+          return {
+            name: cat.name,
+            efficiency,
+            estimated,
+            actual,
+            color: cat.color
+          };
+        }).filter(d => d.estimated > 0);
+      }, [tasks, categories]);
+
+      return (
+        <div className="min-h-screen pb-24 md:pb-8">
+          <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-6">
+            <header className="text-center py-4">
+              <h1 className="text-4xl font-medium text-macaron-pink-dark tracking-[0.2em] drop-shadow-sm uppercase">
+                MISSION CORE
+              </h1>
+              <p className="text-macaron-pink-dark/80 font-medium mt-2 text-sm md:text-base">
+                生活的每一刻都值得好好記錄
+              </p>
+            </header>
+
+            <nav className="hidden md:flex justify-center gap-4 mb-8">
+              <NavButton active={view === 'calendar'} onClick={() => setView('calendar')} icon={<CalendarIcon size={20} />} label="行事曆" />
+              <NavButton active={view === 'tasks'} onClick={() => setView('tasks')} icon={<ListTodo size={20} />} label="今日待破關任務" />
+              <NavButton active={view === 'stats'} onClick={() => setView('stats')} icon={<BarChart3 size={20} />} label="效率統計" />
+            </nav>
+
+            <main className="min-h-[60vh]">
+              <AnimatePresence mode="wait">
+                {view === 'calendar' && (
+                  <motion.div 
+                    key="calendar"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-6"
+                  >
+                    <section className="bg-white/90 backdrop-blur-md p-6 rounded-3xl shadow-xl border-4 border-macaron-pink">
+                      <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-2xl font-medium text-slate-700 flex items-center gap-2">
+                          <CalendarIcon size={24} className="text-macaron-pink-dark" />
+                          行事曆
+                        </h2>
+                        <div className="flex items-center gap-4 bg-macaron-pink-light p-2 rounded-2xl">
+                          <button onClick={() => setCurrentDate(subMonths(currentDate, 1))} className="p-2 hover:bg-white rounded-xl transition-all">
+                            <ChevronLeft size={24} className="text-macaron-pink-dark" />
+                          </button>
+                          <span className="font-medium text-slate-700 min-w-[120px] text-center text-lg">
+                            {format(currentDate, 'yyyy年 MM月')}
+                          </span>
+                          <button onClick={() => setCurrentDate(addMonths(currentDate, 1))} className="p-2 hover:bg-white rounded-xl transition-all">
+                            <ChevronRight size={24} className="text-macaron-pink-dark" />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-7 gap-2 text-center mb-4">
+                        {['日', '一', '二', '三', '四', '五', '六'].map(day => (
+                          <div key={day} className="text-sm font-medium text-macaron-pink-dark py-2">{day}</div>
+                        ))}
+                      </div>
+
+                      <div className="grid grid-cols-7 gap-2">
+                        {renderCalendarDays(currentDate, selectedDate, (d) => {
+                          setSelectedDate(d);
+                        }, tasks)}
+                      </div>
+                    </section>
+
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between bg-white/80 p-4 rounded-3xl border-2 border-macaron-pink">
+                        <h2 className="text-xl font-medium text-slate-700">
+                          {format(selectedDate, 'MM月dd日')} 的任務
+                        </h2>
+                        <button 
+                          onClick={() => setIsAddingTask(true)}
+                          className="flex items-center gap-2 px-4 py-2 bg-macaron-pink-dark text-white rounded-xl shadow-md hover:scale-105 transition-all font-medium text-sm"
+                        >
+                          <Plus size={18} />
+                          新增
+                        </button>
+                      </div>
+                      
+                      {tasksForSelectedDate.length === 0 ? (
+                        <div className="bg-white/40 border-2 border-dashed border-macaron-pink rounded-3xl p-8 text-center">
+                          <p className="text-macaron-pink-dark font-medium">這天還沒有任務喔</p>
+                        </div>
+                      ) : (
+                        tasksForSelectedDate.map((task) => (
+                          <TaskItem 
+                            key={task.id} 
+                            task={task} 
+                            category={categories.find(c => c.id === task.categoryId)}
+                            onComplete={() => setCompletingTask(task)}
+                            onDelete={() => deleteTask(task.id)}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+
+                {view === 'tasks' && (
+                  <motion.div 
+                    key="tasks"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-6"
+                  >
+                    <div className="flex items-center justify-between bg-white/80 p-4 rounded-3xl border-2 border-macaron-pink">
+                      <h2 className="text-2xl font-medium text-slate-700">
+                        今日待破關任務
+                      </h2>
+                      <button 
+                        onClick={() => setIsAddingTask(true)}
+                        className="flex items-center gap-2 px-6 py-3 bg-macaron-pink-dark text-white rounded-2xl shadow-lg hover:scale-105 transition-all font-medium"
+                      >
+                        <Plus size={24} />
+                        新增
+                      </button>
+                    </div>
+
+                    <div className="space-y-4">
+                      {tasksForToday.length === 0 ? (
+                        <div className="bg-white/50 border-4 border-dashed border-macaron-pink rounded-3xl p-16 text-center">
+                          <p className="text-macaron-pink-dark font-medium text-xl">今天沒有任務需要出動唷～</p>
+                        </div>
+                      ) : (
+                        tasksForToday.map((task) => (
+                          <TaskItem 
+                            key={task.id} 
+                            task={task} 
+                            category={categories.find(c => c.id === task.categoryId)}
+                            onComplete={() => setCompletingTask(task)}
+                            onDelete={() => deleteTask(task.id)}
+                          />
+                        ))
+                      )}
+                    </div>
+                  </motion.div>
+                )}
+
+                {view === 'stats' && (
+                  <motion.div 
+                    key="stats"
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-6"
+                  >
+                    <section className="bg-white/90 p-8 rounded-3xl shadow-xl border-4 border-macaron-pink">
+                      <h2 className="text-2xl font-medium mb-8 flex items-center gap-2 text-slate-700">
+                        <BarChart3 size={28} className="text-macaron-pink-dark" />
+                        類別效率統計
+                      </h2>
+                      
+                      {categoryEfficiencyData.length === 0 ? (
+                        <div className="text-center py-12 text-slate-400 font-medium">
+                          尚無完成的任務數據可供統計
+                        </div>
+                      ) : (
+                        <div className="space-y-8">
+                          <div className="h-80 w-full">
+                            <ResponsiveContainer width="100%" height="100%">
+                              <BarChart data={categoryEfficiencyData} layout="vertical" margin={{ left: 20, right: 40 }}>
+                                <CartesianGrid strokeDasharray="3 3" horizontal={true} vertical={false} stroke="#fce7f3" />
+                                <XAxis type="number" hide />
+                                <YAxis dataKey="name" type="category" axisLine={false} tickLine={false} tick={{fontSize: 14, fontWeight: 500, fill: '#334155'}} width={80} />
+                                <Tooltip 
+                                  cursor={{fill: '#fff1f2'}}
+                                  contentStyle={{borderRadius: '20px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)'}}
+                                />
+                                <Bar dataKey="efficiency" name="效率 %" radius={[0, 10, 10, 0]} barSize={30}>
+                                  {categoryEfficiencyData.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color} />
+                                  ))}
+                                </Bar>
+                              </BarChart>
+                            </ResponsiveContainer>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {categoryEfficiencyData.map(data => (
+                              <div key={data.name} className="bg-macaron-pink-light p-4 rounded-2xl flex items-center justify-between border border-white">
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded-full" style={{ backgroundColor: data.color }} />
+                                    <span className="font-medium text-slate-700">{data.name}</span>
+                                  </div>
+                                  <div className="text-xs font-medium text-slate-400 mt-1">
+                                    預計: {formatMinutes(data.estimated)} | 實際: {formatMinutes(data.actual)}
+                                  </div>
+                                </div>
+                                <div className="text-2xl font-medium text-macaron-pink-dark">
+                                  {data.efficiency}%
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </section>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </main>
+
+            <nav className="fixed bottom-6 left-4 right-4 md:hidden flex justify-around items-center bg-white/90 backdrop-blur-lg p-3 rounded-3xl shadow-2xl border-2 border-macaron-pink z-40">
+              <MobileNavButton active={view === 'calendar'} onClick={() => setView('calendar')} icon={<CalendarIcon size={24} />} />
+              <MobileNavButton active={view === 'tasks'} onClick={() => setView('tasks')} icon={<ListTodo size={24} />} />
+              <MobileNavButton active={view === 'stats'} onClick={() => setView('stats')} icon={<BarChart3 size={24} />} />
+            </nav>
+          </div>
+
+          <AnimatePresence>
+            {isAddingTask && (
+              <TaskFormModal 
+                categories={categories}
+                onClose={() => setIsAddingTask(false)}
+                onSubmit={addTask}
+                onAddCategory={addCategory}
+              />
+            )}
+            {completingTask && (
+              <CompleteTaskModal 
+                task={completingTask}
+                onClose={() => setCompletingTask(null)}
+                onSubmit={(h, m) => finishTask(completingTask.id, h, m)}
+              />
+            )}
+          </AnimatePresence>
+        </div>
+      );
+    }
+
+    function NavButton({ active, onClick, icon, label }) {
+      return (
+        <button 
+          onClick={onClick}
+          className={cn(
+            "flex items-center gap-2 px-8 py-4 rounded-2xl font-medium transition-all transform hover:scale-105",
+            active 
+              ? "bg-macaron-pink-dark text-white shadow-lg" 
+              : "bg-white text-macaron-pink-dark hover:bg-macaron-pink-light"
+          )}
+        >
+          {icon}
+          {label}
+        </button>
+      );
+    }
+
+    function MobileNavButton({ active, onClick, icon }) {
+      return (
+        <button 
+          onClick={onClick}
+          className={cn(
+            "p-4 rounded-2xl transition-all",
+            active ? "bg-macaron-pink-dark text-white scale-110 shadow-lg" : "text-macaron-pink-dark"
+          )}
+        >
+          {icon}
+        </button>
+      );
+    }
+
+    function renderCalendarDays(currentDate, selectedDate, onSelect, tasks) {
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(monthStart);
+      const startDate = startOfWeek(monthStart);
+      const endDate = endOfWeek(monthEnd);
+
+      const dateFormat = "d";
+      const rows = [];
+
+      let days = [];
+      let day = startDate;
+      let formattedDate = "";
+
+      while (day <= endDate) {
+        for (let i = 0; i < 7; i++) {
+          formattedDate = format(day, dateFormat);
+          const cloneDay = day;
+          const isSelected = isSameDay(day, selectedDate);
+          const isCurrentMonth = isSameMonth(day, monthStart);
+          
+          const dayTasks = tasks.filter(t => isSameDay(parseISO(t.date), cloneDay));
+          const hasTasks = dayTasks.length > 0;
+          const allCompleted = hasTasks && dayTasks.every(t => t.completed);
+
+          days.push(
+            <button
+              key={day.toString()}
+              onClick={() => onSelect(cloneDay)}
+              className={cn(
+                "relative h-16 flex flex-col items-center justify-center rounded-2xl transition-all border-2",
+                !isCurrentMonth && "text-macaron-pink opacity-30 border-transparent",
+                isCurrentMonth && !isSelected && "hover:bg-macaron-pink-light border-transparent text-slate-600 font-medium",
+                isSelected && "bg-macaron-pink-dark text-white shadow-md font-medium border-white scale-105 z-10"
+              )}
+            >
+              <span className="text-lg">{formattedDate}</span>
+              {hasTasks && (
+                <div className="absolute bottom-2 flex gap-1">
+                  <div className={cn(
+                    "w-1.5 h-1.5 rounded-full",
+                    allCompleted ? "bg-macaron-green" : "bg-macaron-pink-dark"
+                  )} />
+                </div>
+              )}
+            </button>
+          );
+          day = addMonths(day, 0);
+          day.setDate(day.getDate() + 1);
+        }
+        rows.push(
+          <React.Fragment key={day.toString()}>
+            {days}
+          </React.Fragment>
+        );
+        days = [];
+      }
+      return rows;
+    }
+
+    function TaskItem({ task, category, onComplete, onDelete }) {
+      return (
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className={cn(
+            "bg-white p-5 rounded-3xl shadow-sm border-2 transition-all flex items-center gap-4 group",
+            task.completed ? "border-macaron-green/30 bg-macaron-green/5" : "border-macaron-pink hover:shadow-md"
+          )}
+        >
+          <button 
+            onClick={task.completed ? undefined : onComplete}
+            className={cn(
+              "flex-shrink-0 transition-colors",
+              task.completed ? "text-macaron-green cursor-default" : "text-macaron-pink-dark hover:text-macaron-pink"
+            )}
+          >
+            {task.completed ? <CheckCircle2 size={36} /> : <Circle size={36} />}
+          </button>
+          
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-1">
+              <span 
+                className="text-[10px] font-medium px-3 py-1 rounded-full uppercase tracking-widest text-slate-700"
+                style={{ backgroundColor: category?.color || '#eee' }}
+              >
+                {category?.name || '未分類'}
+              </span>
+            </div>
+            <h3 className={cn(
+              "text-xl font-medium truncate text-slate-700",
+              task.completed && "text-slate-400 line-through"
+            )}>
+              {task.title}
+            </h3>
+            <div className="flex items-center gap-4 mt-2 text-slate-400 text-sm font-medium">
+              <span className="flex items-center gap-1.5">
+                <Clock size={16} className="text-macaron-pink-dark" />
+                預計: {formatMinutes(task.estimatedMinutes)}
+              </span>
+              {task.completed && task.actualMinutes !== undefined && (
+                <span className="flex items-center gap-1.5 text-macaron-blue">
+                  <CheckCircle2 size={16} />
+                  實際: {formatMinutes(task.actualMinutes)}
+                </span>
+              )}
+            </div>
+          </div>
+
+          <button 
+            onClick={onDelete}
+            className="p-3 text-slate-300 hover:text-red-400 hover:bg-red-50 rounded-xl opacity-0 group-hover:opacity-100 transition-all"
+          >
+            <Trash2 size={20} />
+          </button>
+        </motion.div>
+      );
+    }
+
+    function TaskFormModal({ categories, onClose, onSubmit, onAddCategory }) {
+      const [title, setTitle] = useState('');
+      const [categoryId, setCategoryId] = useState(categories[0]?.id || '');
+      const [hours, setHours] = useState(0);
+      const [minutes, setMinutes] = useState(30);
+      
+      const [showCatForm, setShowCatForm] = useState(false);
+      const [newCatName, setNewCatName] = useState('');
+      const [newCatColor, setNewCatColor] = useState('#FFD1DC');
+
+      const handleAddCat = () => {
+        if (newCatName.trim()) {
+          onAddCategory(newCatName.trim(), newCatColor);
+          setNewCatName('');
+          setShowCatForm(false);
+        }
+      };
+
+      return (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="bg-white w-full max-w-md rounded-[2rem] shadow-2xl overflow-hidden"
+          >
+            <div className="p-8 space-y-8">
+              <div className="flex items-center justify-between">
+                <h3 className="text-3xl font-medium text-slate-700">新增任務</h3>
+                <button onClick={onClose} className="p-3 bg-macaron-pink-light hover:bg-macaron-pink rounded-2xl transition-all">
+                  <X size={24} className="text-macaron-pink-dark" />
+                </button>
+              </div>
+
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <label className="text-lg font-medium text-slate-700 ml-1">任務名稱</label>
+                  <input 
+                    autoFocus
+                    type="text" 
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                    placeholder="想要完成什麼呢？"
+                    className="w-full px-6 py-4 rounded-2xl bg-macaron-pink-light border-4 border-transparent focus:border-macaron-pink focus:bg-white outline-none font-medium text-lg transition-all"
+                  />
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <label className="text-lg font-medium text-slate-700 ml-1">類別</label>
+                    <button 
+                      onClick={() => setShowCatForm(!showCatForm)}
+                      className="text-sm font-medium text-macaron-pink-dark flex items-center gap-1 hover:underline"
+                    >
+                      {showCatForm ? '取消新增' : '管理類別'}
+                    </button>
+                  </div>
+
+                  {showCatForm ? (
+                    <motion.div 
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      className="bg-macaron-pink-light p-5 rounded-3xl space-y-4 border-2 border-macaron-pink"
+                    >
+                      <div className="flex gap-3">
+                        <input 
+                          type="text"
+                          placeholder="類別名稱"
+                          value={newCatName}
+                          onChange={e => setNewCatName(e.target.value)}
+                          className="flex-1 px-4 py-2 rounded-xl bg-white border-none font-medium outline-none"
+                        />
+                        <div className="flex items-center gap-2 bg-white px-3 rounded-xl">
+                          <Palette size={18} className="text-slate-400" />
+                          <input 
+                            type="color"
+                            value={newCatColor}
+                            onChange={e => setNewCatColor(e.target.value)}
+                            className="w-8 h-8 border-none bg-transparent cursor-pointer"
+                          />
+                        </div>
+                      </div>
+                      <button 
+                        onClick={handleAddCat}
+                        className="w-full py-2 bg-macaron-pink-dark text-white rounded-xl font-medium text-sm"
+                      >
+                        確認新增
+                      </button>
+                    </motion.div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {categories.map(cat => (
+                        <button
+                          key={cat.id}
+                          onClick={() => setCategoryId(cat.id)}
+                          className={cn(
+                            "px-5 py-2.5 rounded-2xl text-sm font-medium transition-all border-4",
+                            categoryId === cat.id 
+                              ? "border-slate-800 scale-105 shadow-md" 
+                              : "border-transparent bg-macaron-pink-light text-slate-500"
+                          )}
+                          style={categoryId === cat.id ? { backgroundColor: cat.color } : {}}
+                        >
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3">
+                  <label className="text-lg font-medium text-slate-700 ml-1">預計花費時間</label>
+                  <div className="flex items-center gap-4">
+                    <div className="flex-1 flex items-center gap-3 bg-macaron-pink-light p-2 rounded-2xl border-4 border-transparent focus-within:border-macaron-pink transition-all">
+                      <input 
+                        type="number" 
+                        min="0"
+                        value={hours}
+                        onChange={e => setHours(parseInt(e.target.value) || 0)}
+                        className="w-full bg-transparent text-center py-2 font-medium text-2xl focus:outline-none"
+                      />
+                      <span className="text-sm font-medium text-macaron-pink-dark pr-4">小時</span>
+                    </div>
+                    <div className="flex-1 flex items-center gap-3 bg-macaron-pink-light p-2 rounded-2xl border-4 border-transparent focus-within:border-macaron-pink transition-all">
+                      <input 
+                        type="number" 
+                        min="0"
+                        max="59"
+                        value={minutes}
+                        onChange={e => setMinutes(parseInt(e.target.value) || 0)}
+                        className="w-full bg-transparent text-center py-2 font-medium text-2xl focus:outline-none"
+                      />
+                      <span className="text-sm font-medium text-macaron-pink-dark pr-4">分鐘</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <button 
+                disabled={!title || showCatForm}
+                onClick={() => onSubmit(title, categoryId, hours, minutes)}
+                className="w-full py-5 bg-macaron-pink-dark text-white rounded-3xl font-medium text-xl shadow-xl hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50 disabled:scale-100"
+              >
+                開始這項任務！
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      );
+    }
+
+    function CompleteTaskModal({ task, onClose, onSubmit }) {
+      const [hours, setHours] = useState(Math.floor(task.estimatedMinutes / 60));
+      const [minutes, setMinutes] = useState(task.estimatedMinutes % 60);
+
+      return (
+        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.9, y: 20 }}
+            className="bg-white w-full max-w-sm rounded-[2rem] shadow-2xl p-8 space-y-8"
+          >
+            <div className="space-y-6">
+              <div className="text-center space-y-4">
+                <div className="w-24 h-24 bg-macaron-green/30 text-macaron-green rounded-full flex items-center justify-center mx-auto shadow-inner">
+                  <CheckCircle2 size={48} />
+                </div>
+                <h3 className="text-3xl font-medium text-slate-700">辛苦了！</h3>
+                <p className="text-macaron-pink-dark font-medium text-lg">「{task.title}」已完成</p>
+              </div>
+
+              <div className="space-y-4">
+                <label className="text-lg font-medium text-slate-700 block text-center">實際花費了多少時間？</label>
+                <div className="flex items-center gap-4">
+                  <div className="flex-1 flex items-center gap-2 bg-macaron-pink-light p-2 rounded-2xl border-4 border-transparent focus-within:border-macaron-pink transition-all">
+                    <input 
+                      autoFocus
+                      type="number" 
+                      min="0"
+                      value={hours}
+                      onChange={e => setHours(parseInt(e.target.value) || 0)}
+                      className="w-full bg-transparent text-center py-3 text-2xl font-medium focus:outline-none"
+                    />
+                    <span className="text-sm font-medium text-macaron-pink-dark pr-4">小時</span>
+                  </div>
+                  <div className="flex-1 flex items-center gap-2 bg-macaron-pink-light p-2 rounded-2xl border-4 border-transparent focus-within:border-macaron-pink transition-all">
+                    <input 
+                      type="number" 
+                      min="0"
+                      max="59"
+                      value={minutes}
+                      onChange={e => setMinutes(parseInt(e.target.value) || 0)}
+                      className="w-full bg-transparent text-center py-3 text-2xl font-medium focus:outline-none"
+                    />
+                    <span className="text-sm font-medium text-macaron-pink-dark pr-4">分鐘</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <button 
+                  onClick={() => onSubmit(hours, minutes)}
+                  className="w-full py-5 bg-macaron-green text-white rounded-3xl font-medium text-xl shadow-lg hover:scale-[1.02] transition-all"
+                >
+                  確認並記錄
+                </button>
+                <button 
+                  onClick={onClose}
+                  className="w-full py-3 text-slate-400 font-medium hover:text-slate-600 transition-all"
+                >
+                  返回
+                </button>
+              </div>
+            </div>
+          </motion.div>
+        </div>
+      );
+    }
+
+    // 啟動 React 應用程式
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
+</body>
+</html>
