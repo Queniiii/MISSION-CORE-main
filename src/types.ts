@@ -15,6 +15,12 @@ export interface Category {
   color: string;
 }
 
+export interface Profile {
+  id: string;
+  name: string;
+  color: string;
+}
+
 export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'work', name: '工作', color: '#B3E5FC' },
   { id: 'life', name: '生活', color: '#FFD1DC' },

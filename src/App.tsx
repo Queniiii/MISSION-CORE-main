@@ -23,6 +23,9 @@ import {
   Calendar as CalendarIcon,
   ListTodo,
   Trash2,
+  User,
+  LogOut,
+  UserPlus,
   X,
   Palette,
   ArrowRight,
@@ -42,7 +45,7 @@ import {
   Legend
 } from 'recharts';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
-import { Task, Category, DEFAULT_CATEGORIES } from './types';
+import { Task, Category, Profile, DEFAULT_CATEGORIES } from './types';
 import { cn, formatMinutes } from './lib/utils';
 
 type ViewMode = 'calendar' | 'tasks' | 'stats';
@@ -51,14 +54,15 @@ export default function App() {
   const [view, setView] = useState<ViewMode>('tasks');
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(new Date());
-  const [tasks, setTasks] = useState<Task[]>(() => {
-    const saved = localStorage.getItem('macaron_tasks');
+  
+  const [profiles, setProfiles] = useState<Profile[]>(() => {
+    const saved = localStorage.getItem('macaron_profiles');
     return saved ? JSON.parse(saved) : [];
   });
-  const [categories, setCategories] = useState<Category[]>(() => {
-    const saved = localStorage.getItem('macaron_categories');
-    return saved ? JSON.parse(saved) : DEFAULT_CATEGORIES;
-  });
+  const [activeProfileId, setActiveProfileId] = useState<string | null>(null);
+
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [completingTask, setCompletingTask] = useState<Task | null>(null);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
@@ -68,9 +72,45 @@ export default function App() {
 
   // Save to localStorage
   useEffect(() => {
-    localStorage.setItem('macaron_tasks', JSON.stringify(tasks));
-    localStorage.setItem('macaron_categories', JSON.stringify(categories));
-  }, [tasks, categories]);
+    localStorage.setItem('macaron_profiles', JSON.stringify(profiles));
+  }, [profiles]);
+
+  useEffect(() => {
+    if (activeProfileId) {
+      localStorage.setItem(`macaron_tasks_${activeProfileId}`, JSON.stringify(tasks));
+      localStorage.setItem(`macaron_categories_${activeProfileId}`, JSON.stringify(categories));
+    }
+  }, [tasks, categories, activeProfileId]);
+
+  // Load when activeProfileId changes
+  useEffect(() => {
+    if (activeProfileId) {
+      const savedTasks = localStorage.getItem(`macaron_tasks_${activeProfileId}`);
+      setTasks(savedTasks ? JSON.parse(savedTasks) : []);
+      
+      const savedCats = localStorage.getItem(`macaron_categories_${activeProfileId}`);
+      setCategories(savedCats ? JSON.parse(savedCats) : DEFAULT_CATEGORIES);
+    }
+  }, [activeProfileId]);
+  
+  if (!activeProfileId) {
+    return (
+      <ProfileSelector 
+        profiles={profiles}
+        onSelect={setActiveProfileId}
+        onCreate={(name, color) => {
+          const newProfile = { id: crypto.randomUUID(), name, color };
+          setProfiles([...profiles, newProfile]);
+          setActiveProfileId(newProfile.id);
+        }}
+        onDelete={(id) => {
+          setProfiles(profiles.filter(p => p.id !== id));
+          localStorage.removeItem(`macaron_tasks_${id}`);
+          localStorage.removeItem(`macaron_categories_${id}`);
+        }}
+      />
+    );
+  }
 
   const tasksForSelectedDate = useMemo(() => {
     return tasks.filter(task => isSameDay(parseISO(task.date), selectedDate));
@@ -184,12 +224,20 @@ export default function App() {
     <div className="min-h-screen pb-24 md:pb-8">
       <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-6">
         {/* Header */}
-        <header className="text-center py-4">
+        <header className="relative text-center py-4">
+          <button 
+            onClick={() => setActiveProfileId(null)}
+            className="absolute left-0 top-6 md:top-8 flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-macaron-pink-light hover:bg-white text-macaron-pink-dark rounded-xl shadow-sm transition-all font-medium text-sm border-2 border-macaron-pink md:border-transparent"
+          >
+            <LogOut size={18} />
+            <span className="hidden md:inline">切換使用者</span>
+          </button>
+          
           <h1 className="text-4xl font-medium text-macaron-pink-dark tracking-[0.2em] drop-shadow-sm uppercase">
             MISSION CORE
           </h1>
           <p className="text-macaron-pink-dark/80 font-medium mt-2 text-sm md:text-base">
-            生活的每一刻都值得好好記錄
+            歡迎回來，{profiles.find(p => p.id === activeProfileId)?.name}！生活的每一刻都值得好好記錄
           </p>
         </header>
 
@@ -852,6 +900,143 @@ function CompleteTaskModal({ task, onClose, onSubmit }: {
           </div>
         </div>
       </motion.div>
+    </div>
+  );
+}
+
+function ProfileSelector({ 
+  profiles, 
+  onSelect, 
+  onCreate, 
+  onDelete 
+}: { 
+  profiles: Profile[]; 
+  onSelect: (id: string) => void;
+  onCreate: (name: string, color: string) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [isCreating, setIsCreating] = useState(false);
+  const [newName, setNewName] = useState('');
+  const [newColor, setNewColor] = useState('#FFD1DC');
+
+  return (
+    <div className="min-h-screen pb-24 md:pb-8 flex items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-white/90 backdrop-blur-md p-8 md:p-12 rounded-[3rem] shadow-2xl border-8 border-macaron-pink w-full max-w-2xl"
+      >
+        <div className="text-center mb-10">
+          <h1 className="text-4xl md:text-5xl font-medium text-macaron-pink-dark tracking-[0.1em] drop-shadow-sm mb-4">
+            MISSION CORE
+          </h1>
+          <p className="text-slate-500 font-medium text-lg">請問你是哪一位玩家？</p>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
+          {profiles.map(profile => (
+            <motion.div
+              key={profile.id}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="relative group block text-center"
+            >
+              <button 
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(profile.id);
+                }}
+                className="absolute -top-3 -right-3 p-2 bg-red-100 text-red-500 rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10 hover:bg-red-500 hover:text-white"
+              >
+                <X size={16} />
+              </button>
+              <button
+                onClick={() => onSelect(profile.id)}
+                className="w-full flex flex-col items-center gap-4 bg-slate-50 p-6 rounded-3xl border-4 border-transparent hover:border-macaron-pink hover:shadow-xl transition-all"
+              >
+                <div 
+                  className="w-20 h-20 rounded-full shadow-inner flex items-center justify-center text-white"
+                  style={{ backgroundColor: profile.color }}
+                >
+                  <User size={40} className="drop-shadow-sm" />
+                </div>
+                <span className="font-medium text-slate-700 text-lg truncate w-full">{profile.name}</span>
+              </button>
+            </motion.div>
+          ))}
+          
+          <motion.button
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            onClick={() => setIsCreating(true)}
+            className="flex flex-col items-center gap-4 bg-macaron-pink-light/30 p-6 rounded-3xl border-4 border-dashed border-macaron-pink text-macaron-pink-dark hover:bg-macaron-pink-light transition-all h-full justify-center"
+          >
+            <div className="w-20 h-20 rounded-full bg-white flex items-center justify-center shadow-sm">
+              <UserPlus size={40} />
+            </div>
+            <span className="font-medium text-lg">新增玩家</span>
+          </motion.button>
+        </div>
+      </motion.div>
+
+      <AnimatePresence>
+        {isCreating && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+            <motion.div 
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+              className="bg-white w-full max-w-md rounded-[2.5rem] shadow-2xl border-8 border-macaron-pink p-8"
+            >
+              <div className="flex justify-between items-center mb-8">
+                <h3 className="text-2xl font-medium text-slate-700">建立新檔案</h3>
+                <button onClick={() => setIsCreating(false)} className="p-2 hover:bg-slate-100 rounded-xl transition-colors">
+                  <X size={24} className="text-slate-400" />
+                </button>
+              </div>
+              
+              <div className="space-y-6">
+                <div>
+                   <label className="text-sm font-medium text-slate-500 mb-2 block">玩家名稱</label>
+                   <input 
+                     autoFocus
+                     type="text" 
+                     value={newName}
+                     onChange={e => setNewName(e.target.value)}
+                     placeholder="輸入你的名字"
+                     className="w-full px-6 py-4 rounded-2xl bg-slate-50 border-2 border-transparent focus:border-macaron-pink focus:bg-white outline-none font-medium text-lg transition-all"
+                   />
+                </div>
+                <div>
+                   <label className="text-sm font-medium text-slate-500 mb-2 block">代表色</label>
+                   <div className="flex gap-4">
+                     {['#FFD1DC', '#B3E5FC', '#FFF9C4', '#C8E6C9', '#E1BEE7', '#FFCCBC'].map(color => (
+                        <button
+                          key={color}
+                          onClick={() => setNewColor(color)}
+                          className={`w-10 h-10 rounded-full transition-transform ${newColor === color ? 'scale-125 shadow-md ring-4 ring-white' : 'hover:scale-110'}`}
+                          style={{ backgroundColor: color }}
+                        />
+                     ))}
+                   </div>
+                </div>
+                
+                <button 
+                  disabled={!newName.trim()}
+                  onClick={() => {
+                    onCreate(newName.trim(), newColor);
+                    setIsCreating(false);
+                    setNewName('');
+                  }}
+                  className="w-full py-4 bg-macaron-pink-dark text-white rounded-2xl font-medium text-lg shadow-lg hover:scale-[1.02] active:scale-95 transition-all disabled:opacity-50"
+                >
+                  開始遊戲！
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
