@@ -46,7 +46,7 @@ import {
 } from 'recharts';
 import { motion, AnimatePresence, Reorder } from 'motion/react';
 import { Task, Category, Profile, DEFAULT_CATEGORIES } from './types';
-import { cn, formatMinutes } from './lib/utils';
+import { cn, formatMinutes, generateId } from './lib/utils';
 
 type ViewMode = 'calendar' | 'tasks' | 'stats';
 
@@ -106,7 +106,7 @@ export default function App() {
     const targetDate = view === 'tasks' ? today : selectedDate;
     
     const newTask: Task = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       title,
       categoryId,
       date: format(targetDate, 'yyyy-MM-dd'),
@@ -120,7 +120,7 @@ export default function App() {
 
   const addCategory = (name: string, color: string) => {
     const newCategory: Category = {
-      id: crypto.randomUUID(),
+      id: generateId(),
       name,
       color,
     };
@@ -207,7 +207,7 @@ export default function App() {
         profiles={profiles}
         onSelect={setActiveProfileId}
         onCreate={(name, color) => {
-          const newProfile = { id: crypto.randomUUID(), name, color };
+          const newProfile = { id: generateId(), name, color };
           setProfiles([...profiles, newProfile]);
           setActiveProfileId(newProfile.id);
         }}
@@ -224,16 +224,18 @@ export default function App() {
     <div className="min-h-screen pb-24 md:pb-8">
       <div className="max-w-4xl mx-auto p-4 md:p-8 space-y-6">
         {/* Header */}
-        <header className="relative text-center py-4">
-          <button 
-            onClick={() => setActiveProfileId(null)}
-            className="absolute left-0 top-6 md:top-8 flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-macaron-pink-light hover:bg-white text-macaron-pink-dark rounded-xl shadow-sm transition-all font-medium text-sm border-2 border-macaron-pink md:border-transparent"
-          >
-            <LogOut size={18} />
-            <span className="hidden md:inline">切換使用者</span>
-          </button>
+        <header className="relative text-center py-4 flex flex-col items-center md:block">
+          <div className="w-full flex justify-start mb-4 md:mb-0 md:absolute md:left-0 md:top-4 md:z-10">
+            <button 
+              onClick={() => setActiveProfileId(null)}
+              className="flex items-center gap-2 px-3 py-2 md:px-4 md:py-2 bg-macaron-pink-light hover:bg-white text-macaron-pink-dark rounded-xl shadow-sm transition-all font-medium text-sm border-2 border-macaron-pink md:border-transparent"
+            >
+              <LogOut size={18} />
+              <span className="inline md:inline">切換使用者</span>
+            </button>
+          </div>
           
-          <h1 className="text-4xl font-medium text-macaron-pink-dark tracking-[0.2em] drop-shadow-sm uppercase">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-medium text-macaron-pink-dark tracking-[0.2em] drop-shadow-sm uppercase">
             MISSION CORE
           </h1>
           <p className="text-macaron-pink-dark/80 font-medium mt-2 text-sm md:text-base">
